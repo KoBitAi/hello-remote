@@ -1,1 +1,329 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Xml.Serialization;
+using System.IO;
+using System.Xml;
+
+namespace PSTool.Map.Text
+{
+    public partial class Map
+    {
+        partial void SetMap()
+        {
+            /*
+            // temaplate base on type 1 cua 33601
+            #region 
+            //------------------Require values---------------------------------------
+            this.AddressPreFixs.Add("Payee_Address");
+            this.MapHeader.FieldKey = "Payee_ID";
+
+            //2. condition for INCORRECT format file or not
+            //this.ValidatePosition.Add(new Condition("FORM", 2, 106, 4)); 
+            this.ValidatePosition.Add(new Condition("/", 2, 76, 1));
+            this.ValidatePosition.Add(new Condition("/", 2, 79, 1));
+
+            // 3. Check duplicate no or NOT
+            // ---- 1. truong hop KO CAN kiem tra duplciate checkno
+            //this.MapHeader.checkNumberFieldname = "";
+            //this.MapHeader.checkDateFieldname = "";
+            //this.MapHeader.checkAmountFieldname = "";
+            // ---- 2. truong hop CAN kiem tra duplciate checkno, ko can gan vi default checkNumberFieldname= "Check_Number"
+            //this.MapHeader.checkNumberFieldname = "Check_Number";
+            //this.MapHeader.checkDateFieldname = "Check_Date";
+            //this.MapHeader.checkAmountFieldname = "Check_Amount";
+
+
+            //----------------------For Pages------------------------------------------
+            this.DataFromLine = 1;
+            // 2.1 Overflow condition
+            //this.MapOverflow = new MapOverflow("", 1, false);
+
+            // 2.2 Condition for break page, dynamic way
+            // ---- 1. When mets the first line of new page, define the key to break page
+            //this.NewPageCondition.Add(new Condition("1", 1, 1, 1));
+            // ---- 2. When mets the last line of current page, define the key to break page
+            //this.BreakPageCondition.Add(new Condition("Total Amount", 1, 2));
+            this.BreakPageLine = 42; // Standard
+
+            #endregion
+
+
+            #region --------------------------HEADER-----------------------------------
+            // 1. Default fields:
+            this.MapHeader.AddField("Check_Amount", 4, 75, 12);
+            this.MapHeader.AddField("Check_Number", 1, 1, 1);
+            this.MapHeader.AddField("Check_Date", 1, 62, 9);
+
+            this.MapHeader.AddField("Payee_ID", 1, 4, 8);
+            this.MapHeader.AddField("Payee_Name", 7, 12, 20, "5");
+            this.MapHeader.AddField("Payee_Address1", 7, 13, 45);
+            this.MapHeader.AddField("Payee_Address2", 8, 13, 45);
+            this.MapHeader.AddField("Payee_Address3", 8, 13, 45);
+            this.MapHeader.AddField("Payee_Address4", 8, 13, 45);
+
+            //this.MapHeader.AddField("Payee_City", 8, 13, 45);
+            //this.MapHeader.AddField("Payee_State", 8, 13, 45);
+            //this.MapHeader.AddField("Payee_Zip", 8, 13, 45);
+            //this.MapHeader.AddField("Payee_Country", 8, 13, 45);
+
+            // 2. The other defined fields
+            //this.MapHeader.AddField("TextAmount", 5, 13, 150);
+
+            // For generate pay in words
+            //this.MapHeader.MapFieldTextAmount = new MapFieldTextAmount("TextAmount", "Check_Amount");
+
+            // For Sort data before insert into DB
+            //this.MapHeader.AddOrder("Payee_Name", true);
+            //this.MapHeader.AddOrder("Check_Number", true);
+           
+            #endregion
+
+            #region ----------------DETAIL-----------------------
+            // 1. Detail Line1:  main
+            // 1.1 Add Fields:
+            //       if toRow = 0, row to end of detail is dynamic AND need condition for break detail line          
+            var mapDetail = new MapDetail("DetailAreaA|DetailLine1", 5, 0);
+            mapDetail.AddField("InvoiceNumber", 1, 27);
+            mapDetail.AddField("InvoiceDate", 28, 8);
+            mapDetail.AddField("InvoiceAmount", 53, 12);
+            mapDetail.AddField("Discount", 65, 8);
+            mapDetail.AddField("AmountPaid", 73, 12);
+
+            // 1.2 Add condition to break and recognize Detail:
+            //       condition to end of detail line: Use this when toRow of Detail = 0
+            mapDetail.BreakDetailLineCondition.Add(new Condition("              ", 0, 1, 14));
+            mapDetail.RecognizeDetailLineCondition.Add(new Condition(".", 0, 61, 1));
+            mapDetail.RecognizeDetailLineCondition.Add(new Condition(".", 0, 69, 1));
+            mapDetail.RecognizeDetailLineCondition.Add(new Condition(".", 0, 81, 1));
+            mapDetail.RecognizeDetailLineCondition.Add(new Condition(" ", 0, 1, 1, "!="));
+
+            // 1.3 Sum Of Amount:
+            //       Sum Amount to Header
+            //mapDetail.MapSumDetail = new MapSumDetail("Header", "", "", 11, 21);
+            //mapDetail.MapSumDetail.Add("InvoiceAmount", "Payee_Address3");
+            //mapDetail.MapSumDetail.Add("Discount", "Payee_Address4");
+            //mapDetail.MapSumDetail.Add("AmountPaid", "Payee_Address5");
+
+            //       Sum Amount to Detail
+            mapDetail.MapSumDetail = new MapSumDetail("DetailAreaA|DetailLine3", "***CONTINUED***", "TotalAmountPaid", 11, 21);
+            mapDetail.MapSumDetail.Add("InvoiceAmount", "TotalInvoiceAmount");
+            mapDetail.MapSumDetail.Add("Discount", "TotalDiscount");
+            mapDetail.MapSumDetail.Add("AmountPaid", "TotalAmountPaid");
+
+            // 1.4 Second input file: Require values 
+            mapDetail.MapRemittance = new MapRemittance("Payee_ID", 1, 9, 2, 5);
+            mapDetail.MapRemittance.BreakPageLine = 66;             // Standard
+            mapDetail.MapRemittance.BreakDetailLineCondition = mapDetail.BreakDetailLineCondition;
+            mapDetail.MapRemittance.RecognizeDetailLineCondition = mapDetail.RecognizeDetailLineCondition;
+            this.MapDetails.Add(mapDetail);
+
+
+            // 2. Detail Line2: Comment
+            // 2.1 Add Fields:
+            var mapDetail1 = new MapDetail("DetailAreaA|DetailLine2", 5, 0);
+            mapDetail1.AddField("Comment", 1, 84);
+
+            // 2.1 Add condition to break and recognize Detail:
+            //       condition to end of detail line: Use this when toRow of Detail = 0
+            mapDetail1.BreakDetailLineCondition.Add(new Condition("              ", 0, 1, 14));
+            mapDetail1.RecognizeDetailLineCondition.Add(new Condition(".", 0, 61, 1, "!="));
+            mapDetail1.RecognizeDetailLineCondition.Add(new Condition(".", 0, 69, 1, "!="));
+            mapDetail1.RecognizeDetailLineCondition.Add(new Condition(".", 0, 81, 1, "!="));
+            mapDetail1.RecognizeDetailLineCondition.Add(new Condition(" ", 0, 1, 1));
+
+            //// 2.3 Second input file: Require values 
+            mapDetail1.MapRemittance = new MapRemittance("Payee_ID", 1, 9, 2, 5);
+            mapDetail1.MapRemittance.BreakPageLine = 66;  // Standard
+            mapDetail1.MapRemittance.BreakDetailLineCondition = mapDetail1.BreakDetailLineCondition;
+            mapDetail1.MapRemittance.RecognizeDetailLineCondition = mapDetail1.RecognizeDetailLineCondition;
+            this.MapDetails.Add(mapDetail1);
+
+            #endregion
+
+            #region FOOTER
+            //this.MapFooter.AddField("Test", 7, 12, 20, "5");
+            #endregion
+            */
+
+
+
+            #region EXAMPLE
+
+            //Check+remit example
+            /*
+            this.AddressPreFixs.Add("Payee_Address");
+            this.MapHeader.FieldKey = "Payee_ID";
+
+            
+            this.ValidatePosition.Add(new Condition("/", 2, 76, 1));
+            this.ValidatePosition.Add(new Condition("/", 2, 79, 1));
+
+            this.DataFromLine = 1;
+            this.BreakPageLine = 42; 
+            this.MapHeader.AddField("Payee_ID", 2, 1, 9);
+            this.MapHeader.AddField("Check_Number", 27, 47, 7);
+            this.MapHeader.AddField("Check_Date", 27, 25, 8);
+            this.MapHeader.AddField("Check_Amount", 27, 70, 13);
+            this.MapHeader.AddField("Payee_Name", 34, 10, 84);
+            this.MapHeader.AddField("Payee_Address1", 35, 10, 84);
+            this.MapHeader.AddField("Payee_Address2", 36, 10, 84);
+            this.MapHeader.AddField("Payee_Address3", 37, 10, 84);
+            this.MapHeader.AddField("Payee_Address4", 38, 10, 84);
+            this.MapHeader.AddField("Payee_Address5", 39, 10, 84);
+            
+            // 2. Detail Line1: Main
+            var mapDetail = new MapDetail("DetailAreaA|DetailLine1", 5, 0);
+            mapDetail.AddField("InvoiceNumber", 1, 27);
+            mapDetail.AddField("InvoiceDate", 28, 8);
+            mapDetail.AddField("InvoiceAmount", 53, 12);
+            mapDetail.AddField("Discount", 65, 8);
+            mapDetail.AddField("AmountPaid", 73, 12);
+             
+            mapDetail.BreakDetailLineCondition.Add(new Condition("              ", 0, 1, 14));
+            mapDetail.RecognizeDetailLineCondition.Add(new Condition(".", 0, 61, 1));
+            mapDetail.RecognizeDetailLineCondition.Add(new Condition(".", 0, 69, 1));
+            mapDetail.RecognizeDetailLineCondition.Add(new Condition(".", 0, 81, 1));
+            mapDetail.RecognizeDetailLineCondition.Add(new Condition(" ", 0, 1, 1, "!="));
+
+            mapDetail.MapSumDetail = new MapSumDetail("DetailAreaA|DetailLine3", "***CONTINUED***", "TotalAmountPaid", 11, 21);
+            mapDetail.MapSumDetail.Add("InvoiceAmount", "TotalInvoiceAmount");
+            mapDetail.MapSumDetail.Add("Discount", "TotalDiscount");
+            mapDetail.MapSumDetail.Add("AmountPaid", "TotalAmountPaid");
+              
+            mapDetail.MapRemittance = new MapRemittance("Payee_ID", 1, 9, 2, 5);
+            mapDetail.MapRemittance.BreakPageLine = 66;             // Standard
+            mapDetail.MapRemittance.BreakDetailLineCondition = mapDetail.BreakDetailLineCondition;
+            mapDetail.MapRemittance.RecognizeDetailLineCondition = mapDetail.RecognizeDetailLineCondition;
+            this.MapDetails.Add(mapDetail);
+
+
+            // 2. Detail Line2: Comment
+            var mapDetail1 = new MapDetail("DetailAreaA|DetailLine2", 5, 0);
+            mapDetail1.AddField("Comment", 1, 84);
+
+            mapDetail1.BreakDetailLineCondition.Add(new Condition("              ", 0, 1, 14));
+            mapDetail1.RecognizeDetailLineCondition.Add(new Condition(".", 0, 61, 1, "!="));
+            mapDetail1.RecognizeDetailLineCondition.Add(new Condition(".", 0, 69, 1, "!="));
+            mapDetail1.RecognizeDetailLineCondition.Add(new Condition(".", 0, 81, 1, "!="));
+            mapDetail1.RecognizeDetailLineCondition.Add(new Condition(" ", 0, 1, 1));
+
+            mapDetail1.MapRemittance = new MapRemittance("Payee_ID", 1, 9, 2, 5);
+            mapDetail1.MapRemittance.BreakPageLine = 66;  // Standard
+            mapDetail1.MapRemittance.BreakDetailLineCondition = mapDetail1.BreakDetailLineCondition;
+            mapDetail1.MapRemittance.RecognizeDetailLineCondition = mapDetail1.RecognizeDetailLineCondition;
+            this.MapDetails.Add(mapDetail1);
+            */
+
+            //PDF example + autocheckno
+            /*
+            this.AddressPreFixs.Add("Payee_Address");
+            this.MapHeader.FieldKey = "Payee_ID";
+           
+            //this.ValidatePosition.Add(new Condition("/", 2, 76, 1));
+            //this.ValidatePosition.Add(new Condition("/", 2, 79, 1));
+            
+
+
+
+            this.NewPageCondition.Add(new Condition("Page", 1, 1, 1, "Contains"));
+            this.DataFromLine = 1;
+
+
+            this.MapHeader.AddField("Check_Number", 3, 64, 10);
+            this.MapHeader.AddField("Check_Date", 4, 64, 10);
+            this.MapHeader.AddField("Payee_ID", 0, 7, 9, "Payee:");
+
+
+            var mapDetail = new MapDetail("DetailAreaA|DetailLine1", 5, 0);
+
+            mapDetail.BreakDetailLineCondition.Add(new Condition("Payee:", 0, 1, 14));
+
+            mapDetail.MapRemittance = new MapRemittance("Payee_ID", 1, 9, 2, 5);
+            mapDetail.MapRemittance.BreakPageCondition.Add(new Condition("Payee:", 0, 1, 14));
+
+
+            this.MapDetails.Add(mapDetail);
+
+            */
+
+            // sum amount from many detail and assign value to Check_Amount
+            this.AddressPreFixs.Add("Payee_Address");
+            this.MapHeader.FieldKey = "Check_Number";
+            this.DataFromLine = 1;
+            this.BreakPageLine = 1;
+
+            //this.MapHeader.AddField("Check_Amount", 1, 0, 0);//					sum of Box12Amt and Box 14 Amt        
+            this.MapHeader.AddField("Check_Number", 1, 1, 12);//		1	12		
+            //this.MapHeader.AddField("Check_Date", 1, 0, 0);//		system date			
+            this.MapHeader.AddField("Payee_ID", 1, 13, 4);//		13	4		
+            this.MapHeader.AddField("Payee_Name", 1, 142, 15);//		= First name(142,15) + mid(157,2) + last(117, 25)			
+            this.MapHeader.AddField("Payee_Address1", 1, 159, 30);//		159	30		
+            this.MapHeader.AddField("Payee_Address2", 1, 189, 30);//		189	30		
+            this.MapHeader.AddField("Payee_Address3", 1, 219, 18);// city + state + zip
+            this.MapHeader.AddField("Payee_City", 1, 219, 18);//		219	18		
+            this.MapHeader.AddField("Payee_State/Province", 1, 237, 2);//		237	2		
+            this.MapHeader.AddField("Payee_Zip/Postal", 1, 239, 10);//		239	10		
+            this.MapHeader.AddField("Country", 1, 249, 2);//		249	2		
+            this.MapHeader.AddField("D_SSN", 1, 4, 9);//		4	9		
+            this.MapHeader.AddField("B_FED_EIN", 1, 17, 10);//		17	10		
+            this.MapHeader.AddField("EmpoyerName", 1, 27, 30);//		27	30		
+            this.MapHeader.AddField("EmpoyerAdd1", 1, 57, 30);//		57	30		
+            this.MapHeader.AddField("EmpoyerAdd2", 1, 87, 18);//		= city(87,18) + state(105,2) + zip(107,10)			
+            this.MapHeader.AddField("Box1", 1, 251, 10);//		251	10		
+            this.MapHeader.AddField("Box2", 1, 261, 10);//		261	10		
+            this.MapHeader.AddField("Box3", 1, 271, 10);//		271	10		
+            this.MapHeader.AddField("Box4", 1, 281, 10);//		281	10		
+            this.MapHeader.AddField("Box5", 1, 291, 10);//		291	10		
+            this.MapHeader.AddField("Box6", 1, 301, 10);//		301	10		
+            this.MapHeader.AddField("Box7", 1, 311, 10);//		311	10		
+            this.MapHeader.AddField("Box8", 1, 321, 10);//		321	10		
+            this.MapHeader.AddField("Box9", 1, 331, 10);//		331	10		
+            this.MapHeader.AddField("Box10", 1, 341, 10);//		341	10		
+            this.MapHeader.AddField("Box11", 1, 351, 10);//		351	10		
+            this.MapHeader.AddField("Box13a", 1, 541, 1);//		541	1		
+            this.MapHeader.AddField("Box13b", 1, 542, 1);//		542	1		
+            this.MapHeader.AddField("Box13c", 1, 543, 1);//		543	1		
+            this.MapHeader.AddField("Box15", 1, 889, 14);//		889	14		
+            this.MapHeader.AddField("Box16", 1, 903, 10);//		903	10		
+            this.MapHeader.AddField("Box17", 1, 913, 10);//	913	10		
+            this.MapHeader.AddField("Box18", 1, 923, 10);//		923	10		
+            this.MapHeader.AddField("Box19", 1, 933, 10);//		933	10		
+            this.MapHeader.AddField("Box20", 1, 943, 12);//		943	12		
+            this.MapHeader.AddField("Box12a_Code_1st", 1, 361, 2);//		361	2
+            this.MapHeader.AddField("Box12a_Amt_1st", 1, 363, 10);//		363	10
+            this.MapHeader.AddField("Box12b_Code_2nd", 1, 373, 2);//		373	2
+            this.MapHeader.AddField("Box12b_Amt_2nd", 1, 375, 10);//		375	10
+            this.MapHeader.AddField("Box12c_Code_3rd", 1, 385, 2);//		385	2
+            this.MapHeader.AddField("Box12c_Amt_3rd", 1, 387, 10);//		387	10
+            this.MapHeader.AddField("Box12d_Code_4th", 1, 397, 2);//		397	2
+            this.MapHeader.AddField("Box12d_Amt_4th", 1, 399, 10);//		399	10
+
+
+
+            var mapDetail = new MapDetail("DetailAreaA|DetailLine1", 1, 1, 23, 15);
+            mapDetail.AddField("Box14_Label", 544, 13);
+            mapDetail.AddField("Box14_Amt", 557, 10);
+            mapDetail.MapSumDetail = new MapSumDetail("Header", "khakha", "DetailAreaA|DetailLine3|TotalAmt", 10, 10);
+            mapDetail.MapSumDetail.Add("Box14_Amt", "Check_Amount");
+            this.MapDetails.Add(mapDetail);
+
+            var mapDetail1 = new MapDetail("DetailAreaA|DetailLine2", 1, 1, 12, 11);
+            mapDetail1.AddField("Box12_Code_5th", 409, 2);
+            mapDetail1.AddField("Box12_Amt_5th", 411, 10);
+
+            // Assign amount to header and detail
+            //mapDetail1.MapSumDetail = new MapSumDetail("Header", "cccc", "DetailAreaA|DetailLine3|TotalAmt", 2, 5);
+            //mapDetail1.MapSumDetail.Add("Box12_Amt_5th", "Check_Amount");
+            this.MapDetails.Add(mapDetail1);
+
+            var mapDetail2 = new MapDetail("DetailAreaA|DetailLine3", 1, 0);
+            mapDetail2.AddField("TotalAmt", 411, 10);
+
+            #endregion
+        }
+    }
+}
 test edit file demo
